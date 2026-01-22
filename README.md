@@ -1,17 +1,6 @@
-# 📊 Analytical Processing API
-
-> **API de análisis de datos con IA que transforma archivos CSV/Excel en visualizaciones inteligentes usando Google Gemini**
+# API de análisis de datos basada en IA
 
 Esta plataforma permite cargar hojas de cálculo, procesarlas automáticamente y obtener sugerencias de visualización generadas por IA, sin necesidad de herramientas de BI complejas.
-
-## ✨ Características
-
-- 📁 **Carga de archivos**: Soporta CSV, XLS y XLSX
-- 🤖 **IA integrada**: Usa Google Gemini para analizar datos y sugerir visualizaciones
-- 📈 **4 tipos de gráficos**: Barras, líneas, pie y scatter
-- 🎯 **Sugerencias inteligentes**: El LLM analiza tus datos y recomienda las mejores visualizaciones
-- 🐳 **Dockerizado**: Fácil despliegue con Docker Compose
-- ⚡ **FastAPI**: API rápida y moderna con documentación automática
 
 ## 🛠️ Tecnologías
 
@@ -24,26 +13,26 @@ Esta plataforma permite cargar hojas de cálculo, procesarlas automáticamente y
 ## 📋 Requerimientos
 
 - [Git](https://git-scm.com/)
-- [Docker](https://www.docker.com/) & Docker Compose
+- [Docker](https://www.docker.com/)
 - API Key de [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ## 🚀 Instalación del proyecto
 
 1. **Clonar el proyecto en tu máquina**
 
-```bash
+```shell
 git clone https://github.com/EdwinAlexanderBernardinoMoran/analytical-processing-api
 ```
 
 2. **Acceder al directorio del proyecto**
 
-```bash
+```shell
 cd analytical-processing-api
 ```
 
 3. **Configurar el archivo de variables de entorno**
 
-```bash
+```shell
 cp .env.example .env
 ```
 
@@ -55,19 +44,11 @@ Edita el archivo `.env` y agrega tu API Key:
 GEMINI_API_KEY="tu_api_key_aqui"
 ```
 
-> 💡 Obtén tu API Key gratis en: https://aistudio.google.com/app/apikey
-
 5. **Levantar el proyecto con Docker**
 
-```bash
+```shell
 docker compose up
 ```
-
-6. **Acceder a la API**
-
-- API: http://localhost:8000
-- Documentación interactiva: http://localhost:8000/docs
-- Redoc: http://localhost:8000/redoc
 
 ## 📚 Documentación de Endpoints
 
@@ -78,9 +59,11 @@ docker compose up
 **Descripción:** Carga un archivo CSV/Excel y recibe sugerencias de visualización generadas por IA.
 
 **Parámetros:**
+
 - `file`: Archivo (FormData) - Formatos soportados: `.csv`, `.xls`, `.xlsx`
 
 **Respuesta:**
+
 ```json
 {
   "status_code": 200,
@@ -109,6 +92,7 @@ docker compose up
 **Descripción:** Obtiene los datos procesados para generar un gráfico específico.
 
 **Body (JSON):**
+
 ```json
 {
   "dataframe_id": "uuid-del-dataframe",
@@ -119,6 +103,7 @@ docker compose up
 ```
 
 **Respuesta:**
+
 ```json
 {
   "status_code": 200,
@@ -131,26 +116,6 @@ docker compose up
     }
   }
 }
-```
-
-## 🔧 Desarrollo
-
-### Ejecutar sin Docker
-
-1. Crear entorno virtual:
-```bash
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-```
-
-2. Instalar dependencias:
-```bash
-pip install -r requirements.txt
-```
-
-3. Ejecutar servidor:
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## 📁 Estructura del Proyecto
@@ -177,14 +142,6 @@ analytical-processing-api/
 ├── docker-compose.yml
 └── .env.example
 ```
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Por favor, abre un issue primero para discutir cambios mayores.
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT.
 
 ## 👤 Autor
 
