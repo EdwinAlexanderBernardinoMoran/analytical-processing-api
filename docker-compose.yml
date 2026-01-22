@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  analyticsapi:
+    image: analytics-processing-api
+    build: .
+    container_name: analytics-api
+    ports:
+      - "8000:8000"
