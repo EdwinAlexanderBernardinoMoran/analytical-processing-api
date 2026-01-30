@@ -1,7 +1,8 @@
 services:
   analyticsapi:
-    image: analytics-processing-api
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: analytics-api
     ports:
       - "8000:8000"
@@ -10,4 +11,5 @@ services:
       - ./requirements.txt:/app/requirements.txt
     environment:
       - PYTHONUNBUFFERED=1
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
