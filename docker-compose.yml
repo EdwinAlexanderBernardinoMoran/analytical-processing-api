@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   analyticsapi:
     image: analytics-processing-api
@@ -7,3 +5,9 @@ services:
     container_name: analytics-api
     ports:
       - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./requirements.txt:/app/requirements.txt
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

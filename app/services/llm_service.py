@@ -79,6 +79,7 @@ class LLMService:
             )
             
             else:
+                print(f"LLM Service Error: {error_msg}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"LLM model not found or unavailable for this API version. Verify the model name and the methods it supports."

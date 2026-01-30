@@ -7,9 +7,9 @@ from app.services.dataframe_analysis_service import DataProcessor
 from app.services.llm_service import get_llm_service
 from app.api.v1.schemas.base_api_response import APIResponse
 
-anality = APIRouter(prefix="/v1/api", tags=["analysis"])
+anality = APIRouter(prefix="/v1/api/analyses", tags=["analysis"])
 
-@anality.post("/analyze-file", response_model=APIResponse[AnalysisResponse], status_code=status.HTTP_200_OK)
+@anality.post("/file", response_model=APIResponse[AnalysisResponse], status_code=status.HTTP_200_OK)
 async def analyze_file(file: UploadFile = File(...)):
     try:
 
