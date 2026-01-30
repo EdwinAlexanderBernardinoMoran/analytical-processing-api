@@ -13,7 +13,7 @@ async def get_chart_data(
     dataframe_id: str = Query(..., description="ID of the stored DataFrame"),
     chart_type: str = Query(..., description="Type of chart (bar, line, pie, scatter)"),
     x_axis: str = Query(..., description="Column name for x-axis"),
-    y_axis: Union[str, List[str]] = Query(..., description="Column name(s) for y-axis")
+    y_axis: str | List[str] = Query(..., description="Column name(s) for y-axis")
 ):
     try:
         dataFrame = DataFrameStorageService.get_dataframe(dataframe_id)
