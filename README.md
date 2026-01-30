@@ -50,11 +50,18 @@ GEMINI_API_KEY="tu_api_key_aqui"
 docker compose up
 ```
 
+
+6. Acceder a la url para visualizar probar los enpoints
+
+```shell
+http://localhost:8000/
+```
+
 ## 📚 Documentación de Endpoints
 
 ### 1. Analizar archivo
 
-**Endpoint:** `POST /v1/api/analyze-file`
+**Endpoint:** `POST /v1/api/analyses/file`
 
 **Descripción:** Carga un archivo CSV/Excel y recibe sugerencias de visualización generadas por IA.
 
@@ -87,11 +94,11 @@ docker compose up
 
 ### 2. Obtener datos del gráfico
 
-**Endpoint:** `POST /v1/api/get-chart-data`
+**Endpoint:** `GET /v1/api/chart/data`
 
 **Descripción:** Obtiene los datos procesados para generar un gráfico específico.
 
-**Body (JSON):**
+**Query Parameters:**
 
 ```json
 {
