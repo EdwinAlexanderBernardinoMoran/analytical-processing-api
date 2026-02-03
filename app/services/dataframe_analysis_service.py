@@ -77,8 +77,7 @@ class DataProcessor:
             return None if isinstance(python_value, float) and np.isnan(python_value) else python_value
 
         if hasattr(value, "isoformat"):  # datetime.date, datetime.datetime, etc.
-            return value.isoformat()
-
+            return value.strftime("%Y-%m-%d")
         # 3. Colecciones (listas, tuplas, sets)
         if isinstance(value, dict):
             return {

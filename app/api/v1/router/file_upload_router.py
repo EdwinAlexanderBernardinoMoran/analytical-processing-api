@@ -3,6 +3,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from app.api.v1.schemas.analysis_chemas import AnalysisResponse
 from app.services.file_processing_service import FileProcessingService
 from app.services.dataframe_storage_service import DataFrameStorageService
+from app.services.file_validation_service import FileValidationService
 from app.services.dataframe_analysis_service import DataProcessor
 from app.services.llm_service import get_llm_service
 from app.api.v1.schemas.base_api_response import APIResponse
@@ -14,6 +15,8 @@ async def analyze_file(file: UploadFile = File(...)):
     try:
 
         dataFrame = await FileProcessingService.read_file_to_dataframe(file)
+        
+        FileValidationService.validate_dataframe(dataFrame)
         
         dataframe_id = DataFrameStorageService.store_dataframe(dataFrame)
         
