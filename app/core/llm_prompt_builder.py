@@ -10,8 +10,7 @@ class LLMPromptBuilder:
         statistical_summary: Dict[str, Any]
     ) -> str:
         
-        prompt = f"""Actúa como un analista de datos experto que identifica los patrones o relaciones más interesantes en los datos y sugiere 3 visualizaciones (gráfico de barras, línea, pie).
-
+        prompt = f"""Actúa como un analista de datos experto, identifica los patrones o relaciones más interesantes en los datos y dame 3 visualizaciones en Gráfico de barras, línea, pie que resuman estos hallazgos.
 
         Información del Dataset:
 
@@ -48,29 +47,69 @@ class LLMPromptBuilder:
         }}
 
         REGLAS PARA AGREGACIONES:
-        - aggregation: "avg" - Calcula el promedio del y_axis agrupado por x_axis
-        - aggregation: "sum" - Calcula la suma del y_axis agrupado por x_axis
-        - aggregation: "count" - Cuenta las ocurrencias agrupadas por x_axis
-        - aggregation: "min" - Encuentra el valor mínimo del y_axis por grupo de x_axis
-        - aggregation: "max" - Encuentra el valor máximo del y_axis por grupo de x_axis
+        - aggregation: "avg" - Calcula el promedio del y_axis agrupado por x_axis (SOLO para columnas NUMÉRICAS)
+        - aggregation: "sum" - Calcula la suma del y_axis agrupado por x_axis (SOLO para columnas NUMÉRICAS)
+        - aggregation: "count" - Cuenta las ocurrencias agrupadas por x_axis (funciona con CUALQUIER tipo de columna)
+        - aggregation: "min" - Encuentra el valor mínimo del y_axis por grupo de x_axis (SOLO para columnas NUMÉRICAS)
+        - aggregation: "max" - Encuentra el valor máximo del y_axis por grupo de x_axis (SOLO para columnas NUMÉRICAS)
         - aggregation: "none" - Usa los datos tal cual están (raw data)
+        
+        REGLA CRÍTICA SOBRE TIPOS DE DATOS:
+        - ANTES de usar "avg", "sum", "min" o "max", VERIFICA que la columna del y_axis sea NUMÉRICA
+        - Revisa el campo "Tipos de datos" al inicio del prompt
+        - Las columnas de tipo "object" o "string" contienen TEXTO → SOLO puedes usar "count"
+        - Las columnas de tipo "int64", "float64", "int32", "float32" son NUMÉRICAS → puedes usar cualquier agregación
+        - Si quieres contar registros agrupados por categoría, usa "count" en CUALQUIER columna
+        
+        Ejemplos según tipos de datos:
+        ✅ CORRECTO: age (int64) con aggregation: "avg" → calcula edad promedio
+        ✅ CORRECTO: nombre (object) con aggregation: "count" → cuenta registros
+        ✅ CORRECTO: transaction_amount (float64) con aggregation: "sum" → suma totales
+        ❌ INCORRECTO: nombre (object) con aggregation: "avg" → NO puedes promediar texto
+        ❌ INCORRECTO: categoria (object) con aggregation: "sum" → NO puedes sumar texto
+        ❌ INCORRECTO: descripcion (object) con aggregation: "min" → NO puedes calcular mínimo de texto
 
         Ejemplos prácticos:
-        1. Para "Edad Promedio por Marca de Tarjeta": 
+        1. Para "Edad Promedio por Marca de Tarjeta" (age es int64): 
            {{"x_axis": "card_brand", "y_axis": "age", "aggregation": "avg", "metric_label": "Edad Promedio"}}
-        2. Para "Total de Ventas por Categoría":
+        2. Para "Total de Ventas por Categoría" (sales es float64):
            {{"x_axis": "category", "y_axis": "sales", "aggregation": "sum", "metric_label": "Total de Ventas"}}
-        3. Para "Cantidad de Clientes por Ciudad":
+        3. Para "Cantidad de Clientes por Ciudad" (customer_id puede ser cualquier tipo):
            {{"x_axis": "city", "y_axis": "customer_id", "aggregation": "count", "metric_label": "Cantidad de Clientes"}}
-        4. Para "Distribución de Clientes por Tipo" (PIE CHART):
+        4. Para "Distribución de Clientes por Tipo" (PIE CHART - customer_id puede ser cualquier tipo):
            {{"x_axis": "customer_type", "y_axis": "customer_id", "aggregation": "count", "metric_label": "Cantidad"}}
+        5. Para "Cantidad de Transacciones por Género" (sexo es object, NO numérico):
+           {{"x_axis": "sexo", "y_axis": "transaction_id", "aggregation": "count", "metric_label": "Cantidad de Transacciones"}}
 
         TIPOS DE GRÁFICO - Usa el apropiado:
-        - bar: Para comparar categorías con agregaciones (promedios, sumas, conteos)
-        - line: Para tendencias temporales o mostrar promedios/totales a lo largo de categorías secuenciales
-        - pie: Para proporciones de un total (requiere aggregation: "count" o "sum")
+        
+        BAR CHART
+        - Usar para comparar magnitudes entre categorías
+        - Cada barra representa una categoría DIFERENTE
+        - El objetivo es comparar valores, NO proporciones
+        - Las categorías del eje X deben ser discretas
 
-        ⚠️ REGLA CRÍTICA PARA PIE CHARTS:
+        LINE CHART
+        - Usar SOLO cuando el eje X represente una secuencia ordenada
+        (fechas, tiempo, periodos, rangos numéricos continuos)
+        - Ideal para mostrar tendencias
+        - NO usar para categorías nominales sin orden natural
+        - Para comparar categorías, usar bar chart
+
+        PIE CHART
+        - Representa SIEMPRE proporciones de un total (100%)
+        - El objetivo es mostrar partes de un todo, NO comparar valores absolutos
+        - Requiere aggregation: "count" o "sum"
+        - El backend calculará automáticamente los PORCENTAJES de cada categoría
+
+        - ⚠️ IMPORTANTE: El backend limita automáticamente a las TOP 6 categorías más grandes
+        - Las categorías restantes se agrupan automáticamente en "Otros"
+        - Ideal para columnas con POCAS categorías únicas (género, tipo de cliente, región, etc.)
+        - NO usar pie charts para columnas con muchas categorías únicas (ciudades, estados, IDs)
+        - Para datos con muchas categorías, preferir BAR CHART horizontal
+        - Ideal para mostrar distribuciones y composiciones simples    
+
+        REGLA CRÍTICA PARA PIE CHARTS:
         - NUNCA uses la misma columna en x_axis y y_axis
         - x_axis: la columna categórica para agrupar (ejemplo: "marca_tarjeta_credito", "sexo", "categoria")
         - y_axis: una columna DIFERENTE para contar o sumar (ejemplo: "customer_id", "transaction_id", cualquier otra columna)
@@ -81,12 +120,6 @@ class LLMPromptBuilder:
         
         ❌ MAL: {{"x_axis": "marca_tarjeta_credito", "y_axis": "marca_tarjeta_credito", "aggregation": "count"}}
         ✅ BIEN: {{"x_axis": "marca_tarjeta_credito", "y_axis": "transaction_id", "aggregation": "count"}}
-
-        REGLA PARA LINE CHARTS:
-        - Usa gráficos de línea SOLO cuando el eje X represente una secuencia ordenada
-        (tiempo, fechas, periodos, rangos numéricos continuos).
-        - NO uses line charts para categorías nominales sin orden natural.
-        - Para comparar promedios entre categorías, prefiere bar charts.
 
 
         REGLA SOBRE EL LENGUAJE DEL INSIGHT:
