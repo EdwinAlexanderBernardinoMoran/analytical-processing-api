@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from app.api.v1.router.file_upload_router import anality
 from app.api.v1.router.charts_router import charts
+from app.api.v1.router.health_router import health_router
 from app.core.middleware import register_middlewares
 
 load_dotenv()
@@ -16,6 +17,7 @@ def create_app() -> FastAPI:
     register_middlewares(app)
 
     # Incluir rutas
+    app.include_router(health_router)
     app.include_router(anality)
     app.include_router(charts)
 
