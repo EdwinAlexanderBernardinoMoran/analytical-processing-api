@@ -1,8 +1,11 @@
 FROM python:3.11-slim
 
+# Variables de entorno para optimización de memoria
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    MALLOC_TRIM_THRESHOLD_=100000 \
+    MALLOC_MMAP_THRESHOLD_=100000
 
 WORKDIR /app
 

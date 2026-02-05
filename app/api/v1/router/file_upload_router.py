@@ -16,7 +16,7 @@ async def analyze_file(file: UploadFile = File(...)):
 
         dataFrame = await FileProcessingService.read_file_to_dataframe(file)
         
-        FileValidationService.validate_dataframe(dataFrame)
+        dataFrame = FileValidationService.validate_dataframe(dataFrame)
         
         dataframe_id = DataFrameStorageService.store_dataframe(dataFrame)
         

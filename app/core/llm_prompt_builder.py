@@ -10,18 +10,52 @@ class LLMPromptBuilder:
         statistical_summary: Dict[str, Any]
     ) -> str:
         
-        prompt = f"""Actúa como un analista de datos experto, identifica los patrones o relaciones más interesantes en los datos y dame 3 visualizaciones en Gráfico de barras, línea, pie que resuman estos hallazgos.
+        prompt = f"""Actúa como un analista de datos experto. Analiza los datos y genera ÚNICAMENTE visualizaciones que sean COMPATIBLES con la estructura y tipo de datos disponibles.
 
         Información del Dataset:
 
         Columnas: {', '.join(column_names)}
-        Eres un analista de datos experto. Actúa como tal
 
         Tipos de datos:
         {json.dumps(data_types, indent=2)}
 
         Resumen estadístico:
         {json.dumps(statistical_summary, indent=2)}
+        
+        PASO 1 - ANÁLISIS DE COMPATIBILIDAD (OBLIGATORIO):
+        
+        Antes de proponer gráficos, DEBES analizar:
+        
+        1. ¿Hay columnas categóricas? (object, string)
+        2. ¿Hay columnas numéricas? (int64, float64, int32, float32)
+        3. ¿Hay columnas temporales? (datetime, date)
+        4. ¿Cuántas categorías únicas tienen las columnas categóricas?
+        5. ¿Existe relación categórica → métrica numérica?
+        
+        PASO 2 - DETERMINAR GRÁFICOS COMPATIBLES:
+        
+        ✅ BAR CHART es compatible SI:
+        - Existe AL MENOS una columna categórica (para x_axis)
+        - Y existe AL MENOS una columna numérica O cualquier columna para contar (para y_axis con aggregation)
+        
+        ✅ LINE CHART es compatible SI:
+        - Existe AL MENOS una columna temporal/secuencial (fechas, periodos) O numérica ordenada (para x_axis)
+        - Y existe AL MENOS una columna numérica para el eje Y
+        - NO usar para categorías nominales sin orden
+        
+        ✅ PIE CHART es compatible SI:
+        - Existe AL MENOS una columna categórica con POCAS categorías únicas (idealmente ≤ 10)
+        - Y existe AL MENOS otra columna diferente para contar o sumar
+        - El objetivo es mostrar proporciones de un todo
+        
+        ⚠️ SI UN TIPO DE GRÁFICO NO ES COMPATIBLE, NO LO PROPONGAS
+        
+        PASO 3 - GENERAR SOLO GRÁFICOS COMPATIBLES:
+        
+        - Propón entre 1 y 3 visualizaciones
+        - SOLO incluye gráficos que sean compatibles según el análisis anterior
+        - NO fuerces un tipo de gráfico si los datos no lo permiten
+        - Prioriza los gráficos más reveladores e informativos
 
         IMPORTANTE - AGREGACIONES Y PROCESAMIENTO:
         - Si necesitas calcular promedios, sumas, conteos u otras agregaciones, debes especificarlo en el parámetro "aggregation"
@@ -81,33 +115,62 @@ class LLMPromptBuilder:
         5. Para "Cantidad de Transacciones por Género" (sexo es object, NO numérico):
            {{"x_axis": "sexo", "y_axis": "transaction_id", "aggregation": "count", "metric_label": "Cantidad de Transacciones"}}
 
-        TIPOS DE GRÁFICO - Usa el apropiado:
+        EJEMPLOS DE ESCENARIOS Y COMPATIBILIDAD:
         
-        BAR CHART
-        - Usar para comparar magnitudes entre categorías
+        ESCENARIO 1: Solo columnas categóricas (nombres, ciudades, categorías)
+        ✅ Compatible: BAR CHART (con aggregation: "count")
+        ✅ Compatible: PIE CHART (si hay pocas categorías, con aggregation: "count")
+        ❌ NO compatible: LINE CHART (no hay secuencia temporal)
+        
+        ESCENARIO 2: Solo columnas numéricas (precios, cantidades, IDs numéricos)
+        ✅ Compatible: LINE CHART (si representan secuencia)
+        ✅ Compatible: BAR CHART (comparando valores)
+        ❌ Generalmente NO: PIE CHART (a menos que sean categorías discretas limitadas)
+        
+        ESCENARIO 3: Mix categóricas + numéricas
+        ✅ Compatible: BAR CHART (categorías en X, métricas en Y)
+        ✅ Compatible: PIE CHART (si las categorías son pocas)
+        ❌ NO compatible: LINE CHART (a menos que haya fechas/tiempo)
+        
+        ESCENARIO 4: Tiene columnas de fecha/tiempo
+        ✅ Compatible: LINE CHART (fechas en X, métricas en Y)
+        ✅ Compatible: BAR CHART (periodos en X, métricas en Y)
+        ❌ Generalmente NO: PIE CHART (fechas no representan partes de un todo)
+        
+        TIPOS DE GRÁFICO - Especificaciones detalladas:
+        
+        BAR CHART - Requisitos de compatibilidad:
+        ✅ USAR cuando:
+        - Comparar magnitudes entre categorías discretas
+        - Tienes columnas categóricas (tipos, marcas, regiones)
         - Cada barra representa una categoría DIFERENTE
         - El objetivo es comparar valores, NO proporciones
-        - Las categorías del eje X deben ser discretas
-
-        LINE CHART
-        - Usar SOLO cuando el eje X represente una secuencia ordenada
-        (fechas, tiempo, periodos, rangos numéricos continuos)
-        - Ideal para mostrar tendencias
-        - NO usar para categorías nominales sin orden natural
-        - Para comparar categorías, usar bar chart
-
-        PIE CHART
-        - Representa SIEMPRE proporciones de un total (100%)
-        - El objetivo es mostrar partes de un todo, NO comparar valores absolutos
-        - Requiere aggregation: "count" o "sum"
-        - El backend calculará automáticamente los PORCENTAJES de cada categoría
-
-        - ⚠️ IMPORTANTE: El backend limita automáticamente a las TOP 6 categorías más grandes
-        - Las categorías restantes se agrupan automáticamente en "Otros"
-        - Ideal para columnas con POCAS categorías únicas (género, tipo de cliente, región, etc.)
-        - NO usar pie charts para columnas con muchas categorías únicas (ciudades, estados, IDs)
-        - Para datos con muchas categorías, preferir BAR CHART horizontal
-        - Ideal para mostrar distribuciones y composiciones simples    
+        ❌ NO USAR cuando:
+        - No hay columnas categóricas
+        - Solo tienes datos temporales continuos (usar line chart)
+        
+        LINE CHART - Requisitos de compatibilidad:
+        ✅ USAR cuando:
+        - El eje X representa una secuencia ORDENADA: fechas, tiempo, periodos, años
+        - Ideal para mostrar tendencias temporales o progresión
+        - Tienes al menos una columna temporal o numérica secuencial
+        ❌ NO USAR cuando:
+        - No hay columnas temporales ni secuenciales
+        - Solo tienes categorías nominales (género, tipo, marca) → usar bar chart
+        - Para comparar categorías discretas → usar bar chart
+        
+        PIE CHART - Requisitos de compatibilidad:
+        ✅ USAR cuando:
+        - Quieres mostrar proporciones de un TODO (100%)
+        - La columna categórica tiene POCAS categorías (idealmente ≤ 10)
+        - Tienes columnas categóricas como: género (2-3 valores), tipo de cliente (3-5 valores), región (5-8 valores)
+        - El objetivo es mostrar composición, NO comparar magnitudes
+        ❌ NO USAR cuando:
+        - La columna tiene MUCHAS categorías únicas (>10-15): ciudades, productos, IDs
+        - No hay columnas categóricas
+        - Quieres comparar valores absolutos → usar bar chart
+        - La columna es temporal (fechas) → usar line chart
+        - Para muchas categorías, preferir bar chart horizontal  
 
         REGLA CRÍTICA PARA PIE CHARTS:
         - NUNCA uses la misma columna en x_axis y y_axis

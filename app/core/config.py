@@ -2,6 +2,24 @@
 import os
 import google.generativeai as genai
 
+class FileConfig:
+    
+    # Tamaño máximo de archivo: 200MB (para soportar archivos de 150MB con margen)
+    MAX_FILE_SIZE_MB = 200
+    MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+    
+    # Tamaño de chunk para procesamiento (10MB)
+    CHUNK_SIZE = 10 * 1024 * 1024
+    
+    # Formatos soportados
+    SUPPORTED_FORMATS = ['.csv', '.xls', '.xlsx']
+    
+    # Límite de filas para procesamiento en chunks
+    CHUNK_ROWS = 50000
+    
+    # Límite de memoria para DataFrame (1GB después de optimización)
+    MAX_DATAFRAME_MEMORY_MB = 1000
+
 class LLMConfig:
     
     # Gemini API settings
