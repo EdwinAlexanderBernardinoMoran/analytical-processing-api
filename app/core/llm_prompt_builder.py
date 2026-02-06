@@ -10,207 +10,139 @@ class LLMPromptBuilder:
         statistical_summary: Dict[str, Any]
     ) -> str:
         
-        prompt = f"""Actúa como un analista de datos experto. Analiza los datos y genera ÚNICAMENTE visualizaciones que sean COMPATIBLES con la estructura y tipo de datos disponibles.
+        prompt = f"""# ROL
+        Eres un analista de datos senior especializado en visualización exploratoria y análisis descriptivo. Tu experiencia está en identificar patrones y proponer visualizaciones efectivas basadas en la estructura real de los datos.
 
-        Información del Dataset:
+        # OBJETIVO
+        Generar entre 1 y 3 sugerencias de gráficos que:
+        1. Sean técnicamente compatibles con los tipos de datos disponibles
+        2. Maximicen el valor informativo para el usuario
+        3. Puedan ejecutarse sin errores en el backend
 
-        Columnas: {', '.join(column_names)}
+        # CONTEXTO DEL DATASET
+        Columnas disponibles: {', '.join(column_names)}
 
         Tipos de datos:
         {json.dumps(data_types, indent=2)}
 
         Resumen estadístico:
         {json.dumps(statistical_summary, indent=2)}
-        
-        PASO 1 - ANÁLISIS DE COMPATIBILIDAD (OBLIGATORIO):
-        
-        Antes de proponer gráficos, DEBES analizar:
-        
-        1. ¿Hay columnas categóricas? (object, string)
-        2. ¿Hay columnas numéricas? (int64, float64, int32, float32)
-        3. ¿Hay columnas temporales? (datetime, date)
-        4. ¿Cuántas categorías únicas tienen las columnas categóricas?
-        5. ¿Existe relación categórica → métrica numérica?
-        
-        PASO 2 - DETERMINAR GRÁFICOS COMPATIBLES:
-        
-        ✅ BAR CHART es compatible SI:
-        - Existe AL MENOS una columna categórica (para x_axis)
-        - Y existe AL MENOS una columna numérica O cualquier columna para contar (para y_axis con aggregation)
-        
-        ✅ LINE CHART es compatible SI:
-        - Existe AL MENOS una columna temporal/secuencial (fechas, periodos) O numérica ordenada (para x_axis)
-        - Y existe AL MENOS una columna numérica para el eje Y
-        - NO usar para categorías nominales sin orden
-        
-        ✅ PIE CHART es compatible SI:
-        - Existe AL MENOS una columna categórica con POCAS categorías únicas (idealmente ≤ 10)
-        - Y existe AL MENOS otra columna diferente para contar o sumar
-        - El objetivo es mostrar proporciones de un todo
-        
-        ⚠️ SI UN TIPO DE GRÁFICO NO ES COMPATIBLE, NO LO PROPONGAS
-        
-        PASO 3 - GENERAR SOLO GRÁFICOS COMPATIBLES:
-        
-        - Propón entre 1 y 3 visualizaciones
-        - SOLO incluye gráficos que sean compatibles según el análisis anterior
-        - NO fuerces un tipo de gráfico si los datos no lo permiten
-        - Prioriza los gráficos más reveladores e informativos
 
-        IMPORTANTE - AGREGACIONES Y PROCESAMIENTO:
-        - Si necesitas calcular promedios, sumas, conteos u otras agregaciones, debes especificarlo en el parámetro "aggregation"
-        - El backend procesará los datos según la agregación especificada
-        - NO asumas que los datos ya están agregados
-        - Distingue claramente entre datos crudos y métricas calculadas
+        # PROCESO DE ANÁLISIS (3 PASOS OBLIGATORIOS)
 
-        Debes devolver un JSON con el siguiente formato:
+        ## PASO 1: Clasificar columnas por tipo
+        Identifica qué columnas son:
+        - Categóricas: object, string
+        - Numéricas: int64, float64, int32, float32
+        - Temporales: datetime, date
+        - Cardinalidad: cuenta categorías únicas en las categóricas
+
+        ## PASO 2: Evaluar compatibilidad de gráficos
+
+        ### Bar Chart ✅ Compatible SI:
+        - Tienes ≥1 columna categórica (x_axis)
+        - Y ≥1 columna numérica O cualquier columna para agregación (y_axis)
+        - Propósito: Comparar magnitudes entre categorías
+
+        ### Line Chart ✅ Compatible SI:
+        - Tienes ≥1 columna temporal/secuencial (x_axis)
+        - Y ≥1 columna numérica (y_axis)
+        - Propósito: Mostrar evolución temporal o tendencias
+
+        ### Pie Chart ✅ Compatible SI:
+        - Tienes ≥1 columna categórica con ≤10 categorías únicas (x_axis)
+        - Y ≥1 columna DIFERENTE para agregación (y_axis)
+        - Propósito: Mostrar proporciones del total (composición)
+
+        ## PASO 3: Seleccionar y generar
+        - Propón 1-3 visualizaciones priorizando las más reveladoras
+        - SOLO sugiere gráficos compatibles según PASO 2
+        - Si un tipo no cumple requisitos, omítelo completamente
+
+        # FORMATO DE SALIDA
+        Devuelve ÚNICAMENTE un objeto JSON válido (sin texto adicional):
+
         {{
         "charts": [
             {{
-            "title": "Título descriptivo del gráfico",
+            "title": "Título descriptivo en español",
             "chart_type": "bar|line|pie",
             "parameters": {{
-                "x_axis": "nombre_columna",
-                "y_axis": "nombre_columna" o ["columna1", "columna2"],
+                "x_axis": "nombre_columna_exacto",
+                "y_axis": "nombre_columna_exacto",
                 "aggregation": "avg|sum|count|min|max|none",
-                "metric_label": "Nombre descriptivo de la métrica calculada"
+                "metric_label": "Etiqueta descriptiva de la métrica"
             }},
-            "insight": "Análisis breve y detallado sobre qué revela este gráfico"
+            "insight": "Análisis descriptivo de 1-2 oraciones sobre qué muestra el gráfico"
             }}
         ]
         }}
 
-        REGLAS PARA AGREGACIONES:
-        - aggregation: "avg" - Calcula el promedio del y_axis agrupado por x_axis (SOLO para columnas NUMÉRICAS)
-        - aggregation: "sum" - Calcula la suma del y_axis agrupado por x_axis (SOLO para columnas NUMÉRICAS)
-        - aggregation: "count" - Cuenta las ocurrencias agrupadas por x_axis (funciona con CUALQUIER tipo de columna)
-        - aggregation: "min" - Encuentra el valor mínimo del y_axis por grupo de x_axis (SOLO para columnas NUMÉRICAS)
-        - aggregation: "max" - Encuentra el valor máximo del y_axis por grupo de x_axis (SOLO para columnas NUMÉRICAS)
-        - aggregation: "none" - Usa los datos tal cual están (raw data)
-        
-        REGLA CRÍTICA SOBRE TIPOS DE DATOS:
-        - ANTES de usar "avg", "sum", "min" o "max", VERIFICA que la columna del y_axis sea NUMÉRICA
-        - Revisa el campo "Tipos de datos" al inicio del prompt
-        - Las columnas de tipo "object" o "string" contienen TEXTO → SOLO puedes usar "count"
-        - Las columnas de tipo "int64", "float64", "int32", "float32" son NUMÉRICAS → puedes usar cualquier agregación
-        - Si quieres contar registros agrupados por categoría, usa "count" en CUALQUIER columna
-        
-        Ejemplos según tipos de datos:
-        ✅ CORRECTO: age (int64) con aggregation: "avg" → calcula edad promedio
-        ✅ CORRECTO: nombre (object) con aggregation: "count" → cuenta registros
-        ✅ CORRECTO: transaction_amount (float64) con aggregation: "sum" → suma totales
-        ❌ INCORRECTO: nombre (object) con aggregation: "avg" → NO puedes promediar texto
-        ❌ INCORRECTO: categoria (object) con aggregation: "sum" → NO puedes sumar texto
-        ❌ INCORRECTO: descripcion (object) con aggregation: "min" → NO puedes calcular mínimo de texto
+        # REGLAS DE AGREGACIÓN (CRÍTICO)
 
-        Ejemplos prácticos:
-        1. Para "Edad Promedio por Marca de Tarjeta" (age es int64): 
-           {{"x_axis": "card_brand", "y_axis": "age", "aggregation": "avg", "metric_label": "Edad Promedio"}}
-        2. Para "Total de Ventas por Categoría" (sales es float64):
-           {{"x_axis": "category", "y_axis": "sales", "aggregation": "sum", "metric_label": "Total de Ventas"}}
-        3. Para "Cantidad de Clientes por Ciudad" (customer_id puede ser cualquier tipo):
-           {{"x_axis": "city", "y_axis": "customer_id", "aggregation": "count", "metric_label": "Cantidad de Clientes"}}
-        4. Para "Distribución de Clientes por Tipo" (PIE CHART - customer_id puede ser cualquier tipo):
-           {{"x_axis": "customer_type", "y_axis": "customer_id", "aggregation": "count", "metric_label": "Cantidad"}}
-        5. Para "Cantidad de Transacciones por Género" (sexo es object, NO numérico):
-           {{"x_axis": "sexo", "y_axis": "transaction_id", "aggregation": "count", "metric_label": "Cantidad de Transacciones"}}
+        | Agregación | Requiere tipo de dato | Descripción |
+        |------------|----------------------|-------------|
+        | avg        | SOLO numéricos (int64, float64) | Promedio agrupado |
+        | sum        | SOLO numéricos (int64, float64) | Suma agrupada |
+        | min        | SOLO numéricos (int64, float64) | Mínimo por grupo |
+        | max        | SOLO numéricos (int64, float64) | Máximo por grupo |
+        | count      | CUALQUIER tipo | Conteo de registros |
+        | none       | CUALQUIER tipo | Datos sin procesar |
 
-        EJEMPLOS DE ESCENARIOS Y COMPATIBILIDAD:
-        
-        ESCENARIO 1: Solo columnas categóricas (nombres, ciudades, categorías)
-        ✅ Compatible: BAR CHART (con aggregation: "count")
-        ✅ Compatible: PIE CHART (si hay pocas categorías, con aggregation: "count")
-        ❌ NO compatible: LINE CHART (no hay secuencia temporal)
-        
-        ESCENARIO 2: Solo columnas numéricas (precios, cantidades, IDs numéricos)
-        ✅ Compatible: LINE CHART (si representan secuencia)
-        ✅ Compatible: BAR CHART (comparando valores)
-        ❌ Generalmente NO: PIE CHART (a menos que sean categorías discretas limitadas)
-        
-        ESCENARIO 3: Mix categóricas + numéricas
-        ✅ Compatible: BAR CHART (categorías en X, métricas en Y)
-        ✅ Compatible: PIE CHART (si las categorías son pocas)
-        ❌ NO compatible: LINE CHART (a menos que haya fechas/tiempo)
-        
-        ESCENARIO 4: Tiene columnas de fecha/tiempo
-        ✅ Compatible: LINE CHART (fechas en X, métricas en Y)
-        ✅ Compatible: BAR CHART (periodos en X, métricas en Y)
-        ❌ Generalmente NO: PIE CHART (fechas no representan partes de un todo)
-        
-        TIPOS DE GRÁFICO - Especificaciones detalladas:
-        
-        BAR CHART - Requisitos de compatibilidad:
-        ✅ USAR cuando:
-        - Comparar magnitudes entre categorías discretas
-        - Tienes columnas categóricas (tipos, marcas, regiones)
-        - Cada barra representa una categoría DIFERENTE
-        - El objetivo es comparar valores, NO proporciones
-        ❌ NO USAR cuando:
-        - No hay columnas categóricas
-        - Solo tienes datos temporales continuos (usar line chart)
-        
-        LINE CHART - Requisitos de compatibilidad:
-        ✅ USAR cuando:
-        - El eje X representa una secuencia ORDENADA: fechas, tiempo, periodos, años
-        - Ideal para mostrar tendencias temporales o progresión
-        - Tienes al menos una columna temporal o numérica secuencial
-        ❌ NO USAR cuando:
-        - No hay columnas temporales ni secuenciales
-        - Solo tienes categorías nominales (género, tipo, marca) → usar bar chart
-        - Para comparar categorías discretas → usar bar chart
-        
-        PIE CHART - Requisitos de compatibilidad:
-        ✅ USAR cuando:
-        - Quieres mostrar proporciones de un TODO (100%)
-        - La columna categórica tiene POCAS categorías (idealmente ≤ 10)
-        - Tienes columnas categóricas como: género (2-3 valores), tipo de cliente (3-5 valores), región (5-8 valores)
-        - El objetivo es mostrar composición, NO comparar magnitudes
-        ❌ NO USAR cuando:
-        - La columna tiene MUCHAS categorías únicas (>10-15): ciudades, productos, IDs
-        - No hay columnas categóricas
-        - Quieres comparar valores absolutos → usar bar chart
-        - La columna es temporal (fechas) → usar line chart
-        - Para muchas categorías, preferir bar chart horizontal  
+        ⚠️ VALIDACIÓN OBLIGATORIA:
+        - ANTES de usar avg/sum/min/max, verifica que y_axis sea numérico en "Tipos de datos"
+        - Las columnas object/string SOLO permiten aggregation: "count"
 
-        REGLA CRÍTICA PARA PIE CHARTS:
-        - NUNCA uses la misma columna en x_axis y y_axis
-        - x_axis: la columna categórica para agrupar (ejemplo: "marca_tarjeta_credito", "sexo", "categoria")
-        - y_axis: una columna DIFERENTE para contar o sumar (ejemplo: "customer_id", "transaction_id", cualquier otra columna)
-        - aggregation: siempre "count" o "sum"
-        
-        ❌ MAL: {{"x_axis": "sexo", "y_axis": "sexo", "aggregation": "count"}}
-        ✅ BIEN: {{"x_axis": "sexo", "y_axis": "customer_id", "aggregation": "count"}}
-        
-        ❌ MAL: {{"x_axis": "marca_tarjeta_credito", "y_axis": "marca_tarjeta_credito", "aggregation": "count"}}
-        ✅ BIEN: {{"x_axis": "marca_tarjeta_credito", "y_axis": "transaction_id", "aggregation": "count"}}
+        # EJEMPLOS DE CONFIGURACIONES VÁLIDAS
 
+        ✅ Edad promedio por ciudad (age: int64, city: object):
+        {{"x_axis": "city", "y_axis": "age", "aggregation": "avg", "metric_label": "Edad Promedio"}}
 
-        REGLA SOBRE EL LENGUAJE DEL INSIGHT:
-        - Los insights deben ser DESCRIPTIVOS, no inferenciales
-        - NO utilices términos estadísticos fuertes como:
-            "significativo", "estadísticamente significativo", "prueba", "correlación fuerte", "impacto significativo"
-        - Usa en su lugar expresiones como:
-            "se observa una diferencia", "se aprecia una variación", "sugiere una posible tendencia",
-            "permite comparar", "muestra diferencias aparentes"
-        - Asume que NO se han realizado pruebas estadísticas inferenciales
+        ✅ Total de ventas por categoría (sales: float64, category: object):
+        {{"x_axis": "category", "y_axis": "sales", "aggregation": "sum", "metric_label": "Total de Ventas"}}
 
-        REGLA PARA metric_label:
-        - El "metric_label" debe describir la MÉTRICA resultante de forma clara y concisa
-        - Para aggregation: "count" → "Cantidad", "Total", "Número de registros"
-        - Para aggregation: "avg" → "Promedio de edad", "Edad promedio", "Promedio"
-        - Para aggregation: "sum" → "Total de ventas", "Suma de ingresos"
-        - Para aggregation: "min" → "Mínimo", "Valor mínimo"
-        - Para aggregation: "max" → "Máximo", "Valor máximo"
-        - NO uses nombres de columnas crudas como "nombres" o "customer_id"
-        - SIEMPRE incluye metric_label en los parameters
+        ✅ Cantidad de clientes por región (customer_id: int64, region: object):
+        {{"x_axis": "region", "y_axis": "customer_id", "aggregation": "count", "metric_label": "Cantidad de Clientes"}}
 
-        VALIDACIÓN FINAL:
-        - Verifica que cada x_axis y y_axis exista en la lista de columnas
-        - NO agregues texto descriptivo entre paréntesis a los nombres
-        - Si hay columnas de fecha, úsalas tal cual están nombradas
-        - SIEMPRE incluye los parámetros "aggregation" y "metric_label" en parameters
-        - Si el insight menciona "promedio", "total", "suma" o "conteo", asegúrate de especificar la aggregation correspondiente
+        ✅ Distribución por género - PIE (gender: object, user_id: int64):
+        {{"x_axis": "gender", "y_axis": "user_id", "aggregation": "count", "metric_label": "Cantidad"}}
 
-        Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales."""
+        ❌ INVÁLIDO - Promedio de texto (name: object):
+        {{"x_axis": "city", "y_axis": "name", "aggregation": "avg"}} → No se puede promediar texto
+
+        ❌ INVÁLIDO - PIE con misma columna:
+        {{"x_axis": "gender", "y_axis": "gender", "aggregation": "count"}} → x_axis e y_axis deben ser diferentes
+
+        # RESTRICCIONES (QUÉ NO HACER)
+
+        ❌ NO sugieras gráficos incompatibles con los tipos de datos disponibles
+        ❌ NO uses agregaciones numéricas (avg/sum/min/max) en columnas object/string
+        ❌ NO uses la misma columna en x_axis e y_axis para pie charts
+        ❌ NO agregues texto descriptivo entre paréntesis a los nombres de columnas
+        ❌ NO uses lenguaje estadístico inferencial en insights ("significativo", "correlación fuerte", "prueba estadística")
+        ❌ NO propongas line charts si no hay columnas temporales o secuenciales
+        ❌ NO propongas pie charts para columnas con >10 categorías únicas
+        ❌ NO incluyas explicaciones adicionales fuera del JSON
+        ❌ NO inventes nombres de columnas que no estén en la lista proporcionada
+
+        # RESTRICCIONES PARA INSIGHTS
+
+        ✅ Usa lenguaje descriptivo:
+        - "Se observa que...", "Los datos muestran...", "Se aprecia una diferencia..."
+        - "Permite comparar...", "Sugiere una posible tendencia..."
+
+        ❌ Evita lenguaje inferencial:
+        - NO: "significativo", "estadísticamente significativo", "correlación fuerte"
+        - NO: "impacto significativo", "prueba que", "demuestra que"
+
+        # VALIDACIÓN FINAL ANTES DE RESPONDER
+
+        Verifica que:
+        1. Todos los nombres de columnas en x_axis/y_axis existen en la lista de columnas
+        2. Las agregaciones son compatibles con el tipo de dato de y_axis
+        3. Para pie charts: x_axis ≠ y_axis
+        4. Cada gráfico incluye todos los campos: title, chart_type, parameters (con aggregation y metric_label), insight
+        5. metric_label es descriptivo (no el nombre crudo de la columna)
+        6. La respuesta es SOLO JSON válido, sin texto adicional"""
 
         return prompt

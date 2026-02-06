@@ -10,6 +10,31 @@ Esta plataforma permite cargar hojas de cálculo, procesarlas automáticamente y
 - **Servidor**: Uvicorn
 - **Containerización**: Docker + Docker Compose
 
+## 🎯 Decisiones Técnicas
+
+### FastAPI
+- Elegido por su alto rendimiento y soporte nativo de async/await
+- Documentación automática con OpenAPI/Swagger integrada
+- Validación de datos robusta con Pydantic
+- Mejor DX (Developer Experience) comparado con Flask o Django para APIs
+
+### Google Gemini
+- API gratuita con límites generosos ideal para prototipado y producción
+- Excelentes capacidades de comprensión de datos estructurados y contexto
+
+### Pandas + NumPy
+- Estándar de la industria para análisis y manipulación de datos en Python
+- Ecosistema maduro con amplia documentación y comunidad activa
+- Compatibilidad nativa con múltiples formatos (CSV, Excel, JSON)
+- Optimizado para operaciones vectorizadas de alto rendimiento
+
+### Docker + Docker Compose
+- Garantiza consistencia entre entornos de desarrollo, testing y producción
+- Simplifica el proceso de despliegue y onboarding de nuevos desarrolladores
+- Aísla dependencias del sistema host, evitando conflictos
+- Facilita escalabilidad horizontal en entornos cloud
+
+
 ## 📋 Requerimientos
 
 - [Git](https://git-scm.com/)
@@ -50,7 +75,6 @@ GEMINI_API_KEY="tu_api_key_aqui"
 docker compose up
 ```
 
-
 6. Acceder a la url para visualizar probar los enpoints
 
 ```shell
@@ -58,6 +82,8 @@ http://localhost:8000/
 ```
 
 ## 📚 Documentación de Endpoints
+
+- [Acceder a la siguiente url para probar los enpoints](http://localhost:8000/docs)
 
 ### 1. Analizar archivo
 
@@ -73,19 +99,21 @@ http://localhost:8000/
 
 ```json
 {
-  "status_code": 200,
-  "message": "Analysis successfully completed",
+  "status_code": 0,
+  "message": "string",
   "data": {
-    "dataframe_id": "uuid-generado",
+    "dataframe_id": "string",
     "chart_suggestions": [
       {
-        "title": "Distribución de ventas por categoría",
-        "chart_type": "bar",
+        "title": "string",
+        "chart_type": "string",
         "parameters": {
-          "x_axis": "categoria",
-          "y_axis": "ventas"
+          "x_axis": "string",
+          "y_axis": "string",
+          "aggregation": "none",
+          "metric_label": ""
         },
-        "insight": "Se observa que la categoría Electrónica representa el 45% de las ventas totales..."
+        "insight": "string"
       }
     ]
   }
@@ -102,10 +130,12 @@ http://localhost:8000/
 
 ```json
 {
-  "dataframe_id": "uuid-del-dataframe",
-  "chart_type": "bar",
-  "x_axis": "categoria",
-  "y_axis": "ventas"
+  "dataframe_id": "string",
+  "chart_type": "string",
+  "x_axis": "string",
+  "y_axis": "string",
+  "aggregation": "string",
+  "metric_label": "string"  
 }
 ```
 
@@ -113,41 +143,69 @@ http://localhost:8000/
 
 ```json
 {
-  "status_code": 200,
-  "message": "Chart data successfully retrieved",
+  "status_code": 0,
+  "message": "string",
   "data": {
-    "chart_type": "bar",
-    "datasets": {
-      "labels": ["Electrónica", "Ropa", "Alimentos"],
-      "data": [45000, 32000, 28000]
-    }
+    "chart_type": "string",
+    "datasets": {}
   }
 }
 ```
+
+## 🤖 Enfoque para la ingeniería de Prompts para IA
+
+Mi enfoque de ingeniería de prompts se basa en estructurar las instrucciones para que la IA entienda claramente el objetivo, el rol, el contexto y las restricciones, guiándola paso a paso para producir resultados precisos, consistentes y alineados con los datos reales, minimizando ambigüedades y respuestas genéricas.
+
+### Beneficios del Enfoque
+
+✅ **Reducción de errores**: Validación en el prompt evita sugerencias incompatibles  
+✅ **Escalabilidad**: Funciona con cualquier estructura de dataset  
+✅ **Claridad**: Instrucciones explícitas reducen ambigüedad en respuestas del LLM  
+✅ **Mantenibilidad**: Lógica de validación centralizada en `llm_prompt_builder.py`
 
 ## 📁 Estructura del Proyecto
 
 ```
 analytical-processing-api/
-├── app/
-│   ├── main.py                 # Punto de entrada de FastAPI
-│   ├── api/
-│   │   └── v1/
-│   │       ├── router/         # Endpoints
-│   │       └── schemas/        # Modelos Pydantic
-│   ├── core/
-│   │   ├── config.py           # Configuración
-│   │   ├── llm_prompt_builder.py  # Prompts para LLM
-│   │   └── middleware.py       # Middleware
-│   └── services/
-│       ├── llm_service.py      # Integración con Gemini
-│       ├── dataframe_analysis_service.py
-│       ├── charts_service.py
-│       └── chart_processors/   # Procesadores por tipo
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-└── .env.example
+├── .dockerignore
+├── .env.example                    # Plantilla de variables de entorno
+├── .gitignore
+├── Dockerfile                      # Configuración del contenedor
+├── docker-compose.yml              # Orquestación de servicios
+├── requirements.txt                # Dependencias de Python
+├── README.md
+└── app/
+    ├── main.py                     # Punto de entrada de FastAPI
+    ├── api/
+    │   └── v1/
+    │       ├── router/
+    │       │   ├── charts_router.py          # Endpoints de gráficos
+    │       │   ├── file_upload_router.py     # Endpoint de carga de archivos
+    │       │   └── health_router.py          # Endpoint de health check
+    │       └── schemas/
+    │           ├── analysis_chemas.py        # Schemas de análisis
+    │           ├── base_api_response.py      # Schema base de respuestas
+    │           └── chart_schema.py           # Schemas de gráficos
+    ├── core/
+    │   ├── config.py                         # Configuración de la app
+    │   ├── llm_prompt_builder.py            # Constructor de prompts para IA
+    │   └── middleware.py                     # Middlewares personalizados
+    └── services/
+        ├── charts_service.py                 # Lógica de procesamiento de gráficos
+        ├── dataframe_analysis_service.py     # Análisis estadístico de datos
+        ├── dataframe_storage_service.py      # Gestión de DataFrames en memoria
+        ├── file_processing_service.py        # Orquestador de procesamiento
+        ├── file_validation_service.py        # Validación de archivos
+        ├── llm_service.py                    # Integración con Google Gemini
+        ├── chart_processors/                 # Patrón Strategy por tipo de gráfico
+        │   ├── bar_processor.py              # Procesador de gráficos de barras
+        │   ├── line_processor.py             # Procesador de gráficos de líneas
+        │   └── pie_processor.py              # Procesador de gráficos circulares
+        └── file_readers/                     # Factory Pattern por formato
+            ├── csv_reader.py                 # Lector de archivos CSV
+            ├── encoding_detector.py          # Detector automático de encoding
+            ├── excel_reader.py               # Lector de archivos Excel
+            └── file_reader_factory.py        # Factory de lectores
 ```
 
 ## 👤 Autor
