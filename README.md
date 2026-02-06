@@ -16,7 +16,6 @@ Esta plataforma permite cargar hojas de cálculo, procesarlas automáticamente y
 - Elegido por su alto rendimiento y soporte nativo de async/await
 - Documentación automática con OpenAPI/Swagger integrada
 - Validación de datos robusta con Pydantic
-- Mejor DX (Developer Experience) comparado con Flask o Django para APIs
 
 ### Google Gemini
 - API gratuita con límites generosos ideal para prototipado y producción
@@ -26,7 +25,6 @@ Esta plataforma permite cargar hojas de cálculo, procesarlas automáticamente y
 - Estándar de la industria para análisis y manipulación de datos en Python
 - Ecosistema maduro con amplia documentación y comunidad activa
 - Compatibilidad nativa con múltiples formatos (CSV, Excel, JSON)
-- Optimizado para operaciones vectorizadas de alto rendimiento
 
 ### Docker + Docker Compose
 - Garantiza consistencia entre entornos de desarrollo, testing y producción
